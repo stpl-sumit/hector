@@ -4,7 +4,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import me.prettyprint.cassandra.service.CassandraClientPoolByHost.ExhaustedPolicy;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -22,14 +21,17 @@ public class CassandraClientPoolByHostTest {
 
   @Before
   public void setupTest() throws Exception {
+    // not passing factory anymore, so cant mock?
     factory = mock(CassandraClientFactory.class);
     poolStore = mock(CassandraClientPool.class);
     CassandraClient createdClient = mock(CassandraClient.class);
     when(factory.makeObject()).thenReturn(createdClient);
-
-    pool = new CassandraClientPoolByHostImpl("url", 1111, "name", poolStore, 50 /*maxActive*/,
-        10000 /*maxWait*/, 5 /*maxIdle*/, ExhaustedPolicy.WHEN_EXHAUSTED_FAIL,
-        factory);
+    CassandraHost cassandraHost = new CassandraHost("url", 1111);
+    cassandraHost.setMaxActive(50);
+    cassandraHost.setMaxWaitTimeWhenExhausted(10000);
+    cassandraHost.setMaxIdle(5);
+    cassandraHost.setExhaustedPolicy(ExhaustedPolicy.WHEN_EXHAUSTED_FAIL);
+    pool = new CassandraClientPoolByHostImpl(cassandraHost, poolStore, new CassandraClientMonitor(), factory);
   }
 
   @Test

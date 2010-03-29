@@ -1,6 +1,5 @@
 package me.prettyprint.cassandra.service;
 
-import java.util.List;
 
 /**
  * A factory for getting handles to {@link CassandraClientPool}.
@@ -47,10 +46,17 @@ public enum CassandraClientPoolFactory {
     jmx.addPool(pool);
     return pool;
   }
-  
+  // remove
   public CassandraClientPool createNew(String[] urlPorts) {
     CassandraClientPool pool = new CassandraClientPoolImpl(jmx.getCassandraMonitor(), urlPorts);
     jmx.addPool(pool);
     return pool;
   }
+  
+  public CassandraClientPool createNew(CassandraHost[] cassandraHosts) {
+    CassandraClientPool pool = new CassandraClientPoolImpl(jmx.getCassandraMonitor(), cassandraHosts);
+    jmx.addPool(pool);
+    return pool;
+  }
+  
 }

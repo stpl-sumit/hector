@@ -53,7 +53,7 @@ public class CassandraClientPoolTest {
 
   @Test
   public void testGetPool() {
-    CassandraClientPoolByHost pool = store.getPool("x", 1);
+    CassandraClientPoolByHost pool = store.getPool(new CassandraHost("x", 1));
     assertNotNull(pool);
   }
 
@@ -150,8 +150,8 @@ public class CassandraClientPoolTest {
     assertNotNull(client3);
     assertSame("client2 should have been reused", client2, client3);
     assertFalse("client1 is not in the liveClients set anymore",
-        store.getPool("localhost", 9170).getLiveClients().contains(client1));
+        store.getPool(new CassandraHost("localhost", 9170)).getLiveClients().contains(client1));
     assertTrue("client2 is in the liveClients set anymore",
-        store.getPool("localhost", 9170).getLiveClients().contains(client2));
+        store.getPool(new CassandraHost("localhost", 9170)).getLiveClients().contains(client2));
   }
 }

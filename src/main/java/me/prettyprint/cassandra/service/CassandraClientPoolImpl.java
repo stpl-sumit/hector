@@ -1,7 +1,5 @@
 package me.prettyprint.cassandra.service;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -30,22 +28,31 @@ import org.slf4j.LoggerFactory;
   /**
    * Mapping b/w the host identifier (url:port) and the pool used to store connections to it.
    */
-  private final Map<PoolKey, CassandraClientPoolByHost> pools;
+  private final Map<CassandraHost, CassandraClientPoolByHost> pools;
 
   private final CassandraClientMonitor clientMonitor;
 
   public CassandraClientPoolImpl(CassandraClientMonitor clientMonitor) {
-    pools = new HashMap<PoolKey, CassandraClientPoolByHost>();
+    pools = new HashMap<CassandraHost, CassandraClientPoolByHost>();
     this.clientMonitor = clientMonitor;
   }
   
   public CassandraClientPoolImpl(CassandraClientMonitor clientMonitor, String[] cassandraHosts) {
     this(clientMonitor);
     for (String urlPort : cassandraHosts) {
-      log.debug("Creating pool-by-host instance: {}", urlPort);    
-      getPool(parseHostFromUrl(urlPort),parsePortFromUrl(urlPort));  
+      log.debug("Creating pool-by-host instance: {}", urlPort);         
+      getPool(new CassandraHost(urlPort));  
     }
   }
+  
+  public CassandraClientPoolImpl(CassandraClientMonitor clientMonitor, CassandraHost[] cassandraHosts) {
+    this(clientMonitor);
+    for (CassandraHost cassandraHost : cassandraHosts) {
+      log.debug("Creating pool-by-host instance: {}", cassandraHost);         
+      getPool(cassandraHost);  
+    }
+  }
+
 
   
   @Override
@@ -53,7 +60,7 @@ import org.slf4j.LoggerFactory;
         PoolExhaustedException, Exception {        
     String[] clients = new String[pools.size()];
     int x = 0;
-    for(PoolKey poolKey : pools.keySet()) {
+    for(CassandraHost poolKey : pools.keySet()) {
       clients[x] = poolKey.getUrlPort();
       x++;
     }    
@@ -63,7 +70,7 @@ import org.slf4j.LoggerFactory;
   @Override
   public CassandraClient borrowClient(String url, int port)
       throws IllegalStateException, PoolExhaustedException, Exception {
-    return getPool(url, port).borrowClient();
+    return getPool(new CassandraHost(url, port)).borrowClient();
   }
 
   @Override
@@ -120,15 +127,14 @@ import org.slf4j.LoggerFactory;
     return pools.size();
   }
 
-  public CassandraClientPoolByHost getPool(String url, int port) {
-    PoolKey key = new PoolKey(url, port);
-    CassandraClientPoolByHost pool = pools.get(key);
+  public CassandraClientPoolByHost getPool(CassandraHost cassandraHost) {
+    CassandraClientPoolByHost pool = pools.get(cassandraHost);
     if (pool == null) {
       synchronized (pools) {
-        pool = pools.get(key);
+        pool = pools.get(cassandraHost);
         if (pool == null) {
-          pool = new CassandraClientPoolByHostImpl(url, port, key.name, this, clientMonitor);
-          pools.put(key, pool);
+          pool = new CassandraClientPoolByHostImpl(cassandraHost, this, clientMonitor);
+          pools.put(cassandraHost, pool);
         }
       }
     }
@@ -165,70 +171,7 @@ import org.slf4j.LoggerFactory;
     return hosts;
   }
 
-  private class PoolKey {
-    @SuppressWarnings("unused")
-    private final String url, ip;
-    @SuppressWarnings("unused")
-    private final int port;
-    private final String name;
 
-    public PoolKey(String url2, int port) {
-      this.port = port;
-      StringBuilder b = new StringBuilder();
-      InetAddress address;
-      String turl, tip;
-      try {
-        address = InetAddress.getByName(url2);
-        turl = isPerformNameResolution() ? address.getHostName() : url2;
-        tip = address.getHostAddress();
-      } catch (UnknownHostException e) {
-        log.error("Unable to resolve host {}", url2);
-        turl = url2;
-        tip = url2;
-      }
-      this.url = turl;
-      ip = tip;
-      b.append(url2);
-      b.append("(");
-      b.append(ip);
-      b.append("):");
-      b.append(port);
-      name = b.toString();
-    }
-    
-    private String getUrlPort() {
-      return new StringBuilder(32).append(url).append(':').append(port).toString();
-    }
-
-    /**
-     * Checks whether name resolution should occur.
-     * @return
-     */
-    private boolean isPerformNameResolution() {
-      String sysprop = System.getProperty(
-          SystemProperties.HECTOR_PERFORM_NAME_RESOLUTION.toString());
-      return sysprop != null && Boolean.valueOf(sysprop);
-
-    }
-    @Override
-    public String toString() {
-      return name;
-    }
-        
-    @Override
-    public boolean equals(Object obj) {
-      if (! (obj instanceof PoolKey)) {
-        return false;
-      }
-      return ((PoolKey) obj).name.equals(name);
-    }
-
-    @Override
-    public int hashCode() {
-      return name.hashCode();
-    }
-
-  }
 
   @Override
   public void invalidateClient(CassandraClient client) {
@@ -241,7 +184,7 @@ import org.slf4j.LoggerFactory;
   }
 
   private CassandraClientPoolByHost getPool(CassandraClient c) {
-    return getPool(c.getUrl(), c.getPort());
+    return getPool(new CassandraHost(c.getUrl(), c.getPort()));
   }
 
   @Override
@@ -251,10 +194,8 @@ import org.slf4j.LoggerFactory;
 
   @Override
   public CassandraClient borrowClient(String urlPort) throws IllegalStateException,
-      PoolExhaustedException, Exception {    
-    String url = parseHostFromUrl(urlPort);    
-    int port = parsePortFromUrl(urlPort);
-    return borrowClient(url, port);
+      PoolExhaustedException, Exception {        
+    return getPool(new CassandraHost(urlPort)).borrowClient();
   }
 
   @Override
@@ -279,11 +220,5 @@ import org.slf4j.LoggerFactory;
     return null;
   }
   
-  private String parseHostFromUrl(String urlPort) {
-    return urlPort.substring(0, urlPort.lastIndexOf(':'));      
-  }
-  
-  private int parsePortFromUrl(String urlPort) {
-    return Integer.valueOf(urlPort.substring(urlPort.lastIndexOf(':')+1, urlPort.length()));  
-  }
+
 }

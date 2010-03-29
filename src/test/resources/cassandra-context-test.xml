@@ -18,13 +18,21 @@
     <bean id="cassandraClientPool" factory-bean="cassandraClientPoolFactory" factory-method="createNew" >
         <constructor-arg>
             <list>
-                <value>localhost:9170</value>
+                <ref bean="cassandraHostLocalhost"/>
             </list>
         </constructor-arg>
     </bean>
     
     <bean id="exampleSpringDao" class="me.prettyprint.cassandra.dao.ExampleSpringDao">
         <constructor-arg><ref bean="cassandraClientPool"/></constructor-arg>
+    </bean>
+    
+    <bean id="cassandraHostLocalhost" class="me.prettyprint.cassandra.service.CassandraHost">
+        <constructor-arg value="localhost"/>
+        <constructor-arg value="9170"/>
+        <property name="maxActive" value="10"/>
+        <property name="maxIdle" value="5"/>
+        <property name="exhaustedPolicy" value="WHEN_EXHAUSTED_BLOCK"/>
     </bean>
 
 </beans>

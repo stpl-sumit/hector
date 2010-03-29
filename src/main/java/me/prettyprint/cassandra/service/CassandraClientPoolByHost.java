@@ -29,26 +29,7 @@ import org.apache.thrift.TException;
  */
 /*package*/ interface CassandraClientPoolByHost {
 
-  enum ExhaustedPolicy {
-    WHEN_EXHAUSTED_FAIL, WHEN_EXHAUSTED_GROW, WHEN_EXHAUSTED_BLOCK
-  }
 
-  public static final ExhaustedPolicy DEFAULT_EXHAUSTED_POLICY =
-      ExhaustedPolicy.WHEN_EXHAUSTED_BLOCK;
-
-  public static final int DEFAULT_MAX_ACTIVE = 50;
-
-  /**
-   * The default max wait time when exhausted happens, default value is negative, which means
-   * it'll block indefinitely.
-   */
-  public static final long DEFAULT_MAX_WAITTIME_WHEN_EXHAUSTED = -1;
-
-  /**
-   * The default max idle number is 5, so if clients keep idle, the total connection
-   * number will decrease to 5
-   */
-  public static final int DEFAULT_MAX_IDLE = 5 ;
 
   /**
    * Obtain a client instance from the pool.

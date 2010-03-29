@@ -2,7 +2,6 @@ package me.prettyprint.cassandra.service;
 
 import java.util.Set;
 
-import org.apache.cassandra.service.Cassandra.batch_insert_args;
 import org.apache.thrift.TException;
 
 /**

@@ -37,11 +37,11 @@ import org.slf4j.LoggerFactory;
   private final String url;
   private final int port;
 
-  public CassandraClientFactory(CassandraClientPool pools, String url, int port,
+  public CassandraClientFactory(CassandraClientPool pools, CassandraHost cassandraHost,
       CassandraClientMonitor clientMonitor) {
     this.pool = pools;
-    this.url = url;
-    this.port = port;
+    this.url = cassandraHost.getUrl();
+    this.port = cassandraHost.getPort();
     timeout = getTimeout();
     this.clientMonitor = clientMonitor;
   }
